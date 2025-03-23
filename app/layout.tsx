@@ -1,11 +1,8 @@
 import "@/styles/globals.css";
 import clsx from "clsx";
 import { Metadata, Viewport } from "next";
-
 import { Providers } from "./providers";
-
 import { Fira_Code as FontMono, Inter as FontSans } from "next/font/google";
-import NavBar from "@/components/NavBar";
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -19,11 +16,11 @@ const fontMono = FontMono({
 
 export const metadata: Metadata = {
   title: {
-    default: "HeyGen Interactive Avatar SDK Demo",
-    template: `%s - HeyGen Interactive Avatar SDK Demo`,
+    default: "Asistente Interactivo",
+    template: `%s - Asistente Interactivo`,
   },
   icons: {
-    icon: "/heygen-logo.png",
+    icon: "/favicon.ico",
   },
 };
 
@@ -42,16 +39,13 @@ export default function RootLayout({
   return (
     <html
       suppressHydrationWarning
-      lang="en"
+      lang="es"
       className={`${fontSans.variable} ${fontMono.variable} font-sans`}
     >
       <head />
-      <body className={clsx("min-h-screen bg-background antialiased")}>
+      <body className={clsx("min-h-screen bg-black antialiased")}>
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-          <main className="relative flex flex-col h-screen w-screen">
-            <NavBar />
-            {children}
-          </main>
+          <main className="h-screen w-screen flex flex-col">{children}</main>
         </Providers>
       </body>
     </html>
