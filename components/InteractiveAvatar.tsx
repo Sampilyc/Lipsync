@@ -17,15 +17,16 @@ import { useEffect, useRef, useState } from "react";
 import { AVATARS, STT_LANGUAGE_LIST } from "@/app/lib/constants";
 
 /**
- * - Siempre "Modo Voz".
- * - Estilo Lógico y Creativo (fondo oscuro, naranja, etc).
+ * - Modo Voz por defecto.
+ * - Estilo inspirado en Lógico y Creativo.
  * - Textos en español.
+ * - Se registran en la consola cada respuesta del avatar.
  */
 export default function InteractiveAvatar() {
   // Estados
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
-  const [debug, setDebug] = useState<string>();
+  const [debug, setDebug] = useState<string>("");
   const [knowledgeId, setKnowledgeId] = useState<string>("");
   const [avatarId, setAvatarId] = useState<string>("");
   const [language, setLanguage] = useState<string>("es");
@@ -61,19 +62,21 @@ export default function InteractiveAvatar() {
     const newToken = await fetchAccessToken();
 
     avatar.current = new StreamingAvatar({
-      token: await newToken,
+      token: newToken,
       basePath: baseApiUrl(),
     });
 
     // Listeners
     avatar.current.on(StreamingEvents.AVATAR_START_TALKING, (e) => {
-      console.log("El avatar comenzó a hablar", e);
+      console.log("El avatar comenzó a hablar.", e);
     });
     avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
-      console.log("El avatar dejó de hablar", e);
+      console.log("El avatar terminó de hablar. Respuesta:", e.detail);
+      // También se puede actualizar el estado de debug si se desea:
+      setDebug(`Respuesta: ${e.detail || "Sin detalle"}`);
     });
     avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
-      console.log("Transmisión desconectada");
+      console.log("Transmisión desconectada.");
       endSession();
     });
     avatar.current?.on(StreamingEvents.STREAM_READY, (event) => {
@@ -96,7 +99,7 @@ export default function InteractiveAvatar() {
         avatarName: avatarId,
         knowledgeId: knowledgeId,
         voice: {
-          rate: 1.5, // velocidad
+          rate: 1.5,
           emotion: VoiceEmotion.EXCITED,
         },
         language: language,
@@ -131,7 +134,7 @@ export default function InteractiveAvatar() {
     setStream(undefined);
   }
 
-  // Efecto: asignar el video al <video> cuando se obtenga el stream
+  // Asigna el stream al elemento <video> cuando esté listo
   useEffect(() => {
     if (stream && mediaStream.current) {
       mediaStream.current.srcObject = stream;
@@ -142,7 +145,7 @@ export default function InteractiveAvatar() {
     }
   }, [stream]);
 
-  // Al desmontar el componente, cerrar la sesión
+  // Al desmontar el componente, cierra la sesión
   useEffect(() => {
     return () => {
       endSession();
@@ -151,10 +154,10 @@ export default function InteractiveAvatar() {
   }, []);
 
   return (
-    // Ocupa todo el contenedor 9:16 (ver /app/page.tsx)
+    // Contenedor que ocupa todo el contenedor 9:16 (definido en /app/page.tsx)
     <div className="w-full h-full flex flex-col text-white font-sans relative">
       {stream ? (
-        // Avatar con video a pantalla completa (object-cover)
+        // Avatar con video a pantalla completa (object-cover para hacer zoom/crop)
         <div className="relative w-full h-full bg-black overflow-hidden">
           <video
             ref={mediaStream}
@@ -183,8 +186,6 @@ export default function InteractiveAvatar() {
               Finalizar
             </Button>
           </div>
-
-          {/* (Opcional) Muestra algo si el usuario está hablando */}
           {isUserTalking && (
             <div className="absolute top-3 left-3 bg-black bg-opacity-60 px-2 py-1 rounded text-sm">
               <p>Escuchando...</p>
@@ -192,7 +193,7 @@ export default function InteractiveAvatar() {
           )}
         </div>
       ) : !isLoadingSession ? (
-        // Pantalla previa (seleccionar info y arrancar sesión)
+        // Pantalla previa para seleccionar datos y arrancar la sesión
         <div className="flex flex-col gap-4 w-full h-full items-center justify-center p-4 bg-[#212121]">
           <div className="flex flex-col gap-2 w-full max-w-xs">
             <Input
@@ -241,13 +242,13 @@ export default function InteractiveAvatar() {
           </Button>
         </div>
       ) : (
-        // Loading spinner
+        // Spinner de carga
         <div className="flex items-center justify-center w-full h-full bg-[#212121]">
           <Spinner color="default" size="lg" />
         </div>
       )}
 
-      {/* Debug info (opcional) */}
+      {/* Información de debug (opcional) */}
       {debug && (
         <p className="text-xs font-mono absolute bottom-1 right-1 opacity-70">
           {debug}
