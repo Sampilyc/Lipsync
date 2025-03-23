@@ -31,7 +31,7 @@ export default function InteractiveAvatar() {
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatar | null>(null);
 
-  // Helper: devuelve la URL base de la API
+  // Helper: URL base de la API
   function baseApiUrl() {
     return process.env.NEXT_PUBLIC_BASE_API_URL;
   }
@@ -39,7 +39,9 @@ export default function InteractiveAvatar() {
   // Obtiene el token del endpoint local
   async function fetchAccessToken() {
     try {
-      const response = await fetch("/api/get-access-token", { method: "POST" });
+      const response = await fetch("/api/get-access-token", {
+        method: "POST",
+      });
       const token = await response.text();
       console.log("Access Token:", token);
       return token;
@@ -64,9 +66,12 @@ export default function InteractiveAvatar() {
       console.log("El avatar comenzó a hablar.", e);
     });
     avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
-      console.log("El avatar terminó de hablar. Respuesta:", e.detail);
-      setCaption(e.detail || "");
-      setDebug(`Respuesta: ${e.detail || "Sin detalle"}`);
+      // Convertir el detalle a string si es un objeto
+      let detail = e.detail;
+      let captionText = typeof detail === "object" ? JSON.stringify(detail) : detail;
+      console.log("El avatar terminó de hablar. Respuesta:", captionText);
+      setCaption(captionText || "");
+      setDebug(`Respuesta: ${captionText || "Sin detalle"}`);
     });
     avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
       console.log("Transmisión desconectada.");
