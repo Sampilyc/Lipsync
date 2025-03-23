@@ -16,12 +16,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { AVATARS, STT_LANGUAGE_LIST } from "@/app/lib/constants";
 
-/**
- * - Modo Voz por defecto.
- * - Estilo inspirado en Lógico y Creativo.
- * - Textos en español.
- * - Se registran en la consola cada respuesta del avatar.
- */
 export default function InteractiveAvatar() {
   // Estados
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -31,12 +25,13 @@ export default function InteractiveAvatar() {
   const [avatarId, setAvatarId] = useState<string>("");
   const [language, setLanguage] = useState<string>("es");
   const [isUserTalking, setIsUserTalking] = useState(false);
+  const [caption, setCaption] = useState<string>("");
 
   // Refs
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatar | null>(null);
 
-  // Helpers
+  // Helper: devuelve la URL base de la API
   function baseApiUrl() {
     return process.env.NEXT_PUBLIC_BASE_API_URL;
   }
@@ -44,9 +39,7 @@ export default function InteractiveAvatar() {
   // Obtiene el token del endpoint local
   async function fetchAccessToken() {
     try {
-      const response = await fetch("/api/get-access-token", {
-        method: "POST",
-      });
+      const response = await fetch("/api/get-access-token", { method: "POST" });
       const token = await response.text();
       console.log("Access Token:", token);
       return token;
@@ -56,7 +49,7 @@ export default function InteractiveAvatar() {
     return "";
   }
 
-  // Iniciar sesión en modo voz directamente
+  // Inicia la sesión en modo voz
   async function startSession() {
     setIsLoadingSession(true);
     const newToken = await fetchAccessToken();
@@ -72,7 +65,7 @@ export default function InteractiveAvatar() {
     });
     avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
       console.log("El avatar terminó de hablar. Respuesta:", e.detail);
-      // También se puede actualizar el estado de debug si se desea:
+      setCaption(e.detail || "");
       setDebug(`Respuesta: ${e.detail || "Sin detalle"}`);
     });
     avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
@@ -93,7 +86,6 @@ export default function InteractiveAvatar() {
     });
 
     try {
-      // Crear la sesión
       await avatar.current.createStartAvatar({
         quality: AvatarQuality.Low,
         avatarName: avatarId,
@@ -106,7 +98,6 @@ export default function InteractiveAvatar() {
         disableIdleTimeout: true,
       });
 
-      // Arranca el modo voz inmediatamente
       await avatar.current?.startVoiceChat({
         useSilencePrompt: false,
       });
@@ -117,7 +108,7 @@ export default function InteractiveAvatar() {
     }
   }
 
-  // Interrumpir el habla actual del avatar
+  // Interrumpe el habla actual del avatar
   async function handleInterrupt() {
     if (!avatar.current) {
       setDebug("El avatar no está inicializado");
@@ -128,7 +119,7 @@ export default function InteractiveAvatar() {
     });
   }
 
-  // Finalizar la sesión y el stream
+  // Finaliza la sesión y el stream
   async function endSession() {
     await avatar.current?.stopAvatar();
     setStream(undefined);
@@ -150,14 +141,11 @@ export default function InteractiveAvatar() {
     return () => {
       endSession();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    // Contenedor que ocupa todo el contenedor 9:16 (definido en /app/page.tsx)
     <div className="w-full h-full flex flex-col text-white font-sans relative">
       {stream ? (
-        // Avatar con video a pantalla completa (object-cover para hacer zoom/crop)
         <div className="relative w-full h-full bg-black overflow-hidden">
           <video
             ref={mediaStream}
@@ -191,9 +179,14 @@ export default function InteractiveAvatar() {
               <p>Escuchando...</p>
             </div>
           )}
+          {/* Captions superpuestos en la parte inferior central */}
+          {caption && (
+            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-70 px-4 py-2 rounded mb-2 z-10">
+              <p className="text-sm text-white">{caption}</p>
+            </div>
+          )}
         </div>
       ) : !isLoadingSession ? (
-        // Pantalla previa para seleccionar datos y arrancar la sesión
         <div className="flex flex-col gap-4 w-full h-full items-center justify-center p-4 bg-[#212121]">
           <div className="flex flex-col gap-2 w-full max-w-xs">
             <Input
@@ -242,13 +235,10 @@ export default function InteractiveAvatar() {
           </Button>
         </div>
       ) : (
-        // Spinner de carga
         <div className="flex items-center justify-center w-full h-full bg-[#212121]">
           <Spinner color="default" size="lg" />
         </div>
       )}
-
-      {/* Información de debug (opcional) */}
       {debug && (
         <p className="text-xs font-mono absolute bottom-1 right-1 opacity-70">
           {debug}
