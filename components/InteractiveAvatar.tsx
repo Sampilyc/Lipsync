@@ -8,24 +8,25 @@ import StreamingAvatar, {
 } from "@heygen/streaming-avatar";
 import {
   Button,
-  Card,
-  CardBody,
-  CardFooter,
-  Divider,
   Input,
   Select,
   SelectItem,
   Spinner,
-  Chip,
-  Tabs,
-  Tab,
 } from "@nextui-org/react";
 import { useEffect, useRef, useState } from "react";
-import { useMemoizedFn, usePrevious } from "ahooks";
-import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
+import { usePrevious } from "ahooks";
+
 import { AVATARS, STT_LANGUAGE_LIST } from "@/app/lib/constants";
 
+/**
+ * Esta versión:
+ * - Elimina por completo los Tabs ("Text mode"/"Voice mode").
+ * - Usa SIEMPRE "Voice mode".
+ * - Mantiene la parte inicial para Custom Knowledge, etc.
+ * - Mantiene los botones "Interrupt" y "End session".
+ */
 export default function InteractiveAvatar() {
+  // Estados
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
@@ -34,16 +35,18 @@ export default function InteractiveAvatar() {
   const [avatarId, setAvatarId] = useState<string>("");
   const [language, setLanguage] = useState<string>("en");
   const [data, setData] = useState<StartAvatarResponse>();
-  const [text, setText] = useState<string>("");
-  const mediaStream = useRef<HTMLVideoElement>(null);
-  const avatar = useRef<StreamingAvatar | null>(null);
-  const [chatMode, setChatMode] = useState("text_mode");
   const [isUserTalking, setIsUserTalking] = useState(false);
 
+  // Refs
+  const mediaStream = useRef<HTMLVideoElement>(null);
+  const avatar = useRef<StreamingAvatar | null>(null);
+
+  // Helpers
   function baseApiUrl() {
     return process.env.NEXT_PUBLIC_BASE_API_URL;
   }
 
+  // Obtén el token del endpoint local
   async function fetchAccessToken() {
     try {
       const response = await fetch("/api/get-access-token", {
@@ -58,15 +61,17 @@ export default function InteractiveAvatar() {
     return "";
   }
 
+  // Iniciar sesión en modo voz directamente
   async function startSession() {
     setIsLoadingSession(true);
     const newToken = await fetchAccessToken();
 
     avatar.current = new StreamingAvatar({
-      token: newToken,
+      token: await newToken,
       basePath: baseApiUrl(),
     });
 
+    // Listeners
     avatar.current.on(StreamingEvents.AVATAR_START_TALKING, (e) => {
       console.log("Avatar started talking", e);
     });
@@ -91,12 +96,13 @@ export default function InteractiveAvatar() {
     });
 
     try {
+      // Crear la sesión
       const res = await avatar.current.createStartAvatar({
         quality: AvatarQuality.Low,
         avatarName: avatarId,
         knowledgeId: knowledgeId,
         voice: {
-          rate: 1.5,
+          rate: 1.5, // velocidad
           emotion: VoiceEmotion.EXCITED,
         },
         language: language,
@@ -104,10 +110,11 @@ export default function InteractiveAvatar() {
       });
 
       setData(res);
+
+      // Arranca el modo voz inmediatamente
       await avatar.current?.startVoiceChat({
         useSilencePrompt: false,
       });
-      setChatMode("voice_mode");
     } catch (error) {
       console.error("Error starting avatar session:", error);
     } finally {
@@ -115,20 +122,7 @@ export default function InteractiveAvatar() {
     }
   }
 
-  async function handleSpeak() {
-    setIsLoadingRepeat(true);
-    if (!avatar.current) {
-      setDebug("Avatar API not initialized");
-      return;
-    }
-    await avatar.current
-      .speak({ text: text, taskType: TaskType.REPEAT, taskMode: TaskMode.SYNC })
-      .catch((e) => {
-        setDebug(e.message);
-      });
-    setIsLoadingRepeat(false);
-  }
-
+  // Interrumpir el habla actual del avatar
   async function handleInterrupt() {
     if (!avatar.current) {
       setDebug("Avatar API not initialized");
@@ -139,36 +133,32 @@ export default function InteractiveAvatar() {
     });
   }
 
+  // Finalizar la sesión y el stream
   async function endSession() {
     await avatar.current?.stopAvatar();
     setStream(undefined);
   }
 
-  const handleChangeChatMode = useMemoizedFn(async (v) => {
-    if (v === chatMode) return;
-    if (v === "text_mode") {
-      avatar.current?.closeVoiceChat();
-    } else {
-      await avatar.current?.startVoiceChat();
+  // (Opcional) Usado anteriormente para "hablar texto" (text mode), lo dejamos por si lo necesitás.
+  async function handleSpeak(text: string) {
+    setIsLoadingRepeat(true);
+    if (!avatar.current) {
+      setDebug("Avatar API not initialized");
+      return;
     }
-    setChatMode(v);
-  });
+    await avatar.current
+      .speak({
+        text,
+        taskType: TaskType.REPEAT,
+        taskMode: TaskMode.SYNC,
+      })
+      .catch((e) => {
+        setDebug(e.message);
+      });
+    setIsLoadingRepeat(false);
+  }
 
-  const previousText = usePrevious(text);
-  useEffect(() => {
-    if (!previousText && text) {
-      avatar.current?.startListening();
-    } else if (previousText && !text) {
-      avatar.current?.stopListening();
-    }
-  }, [text, previousText]);
-
-  useEffect(() => {
-    return () => {
-      endSession();
-    };
-  }, []);
-
+  // Efecto: asignar el video al <video> cuando se obtenga el stream
   useEffect(() => {
     if (stream && mediaStream.current) {
       mediaStream.current.srcObject = stream;
@@ -179,9 +169,18 @@ export default function InteractiveAvatar() {
     }
   }, [mediaStream, stream]);
 
+  // Al desmontar el comp, cerrar la sesión
+  useEffect(() => {
+    return () => {
+      endSession();
+    };
+  }, []);
+
+  // Bloque UI
   return (
     <div className="w-full flex flex-col gap-4 p-4 text-white">
       {stream ? (
+        // Avatar con video
         <div className="relative flex flex-col items-center justify-center bg-black rounded-lg overflow-hidden">
           <video
             ref={mediaStream}
@@ -191,6 +190,7 @@ export default function InteractiveAvatar() {
           >
             <track kind="captions" />
           </video>
+          {/* Botones superpuestos */}
           <div className="absolute bottom-3 right-3 flex flex-col gap-2">
             <Button
               className="bg-gradient-to-tr from-indigo-500 to-indigo-300 rounded-lg"
@@ -211,6 +211,7 @@ export default function InteractiveAvatar() {
           </div>
         </div>
       ) : !isLoadingSession ? (
+        // Pantalla previa (seleccionar info y arrancar sesión)
         <div className="flex flex-col gap-4 w-full items-center justify-center">
           <div className="flex flex-col gap-2 w-full">
             <Input
@@ -264,37 +265,7 @@ export default function InteractiveAvatar() {
         </div>
       )}
 
-      <div className="mt-2">
-        {chatMode === "text_mode" ? (
-          <div className="relative w-full">
-            <InteractiveAvatarTextInput
-              disabled={!stream}
-              input={text}
-              label="Chat"
-              loading={isLoadingRepeat}
-              placeholder="Type something for the avatar to respond"
-              setInput={setText}
-              onSubmit={handleSpeak}
-            />
-            {text && (
-              <div className="absolute right-2 top-2">
-                <Chip size="sm">Listening</Chip>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="w-full text-center">
-            <Button
-              isDisabled={!isUserTalking}
-              className="bg-gradient-to-tr from-indigo-500 to-indigo-300"
-              size="sm"
-              variant="shadow"
-            >
-              {isUserTalking ? "Listening" : "Voice chat"}
-            </Button>
-          </div>
-        )}
-      </div>
+      {/* Opcional: Si querés un debug o texto de estado */}
       <p className="text-xs font-mono text-right">{debug}</p>
     </div>
   );
