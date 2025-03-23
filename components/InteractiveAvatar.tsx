@@ -20,7 +20,7 @@ export default function InteractiveAvatar() {
   // Estados
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
-  const [debug, setDebug] = useState<string>("");
+  // Quitamos el estado debug para que no se muestre texto
   const [knowledgeId, setKnowledgeId] = useState<string>("");
   const [avatarId, setAvatarId] = useState<string>("");
   const [language, setLanguage] = useState<string>("es");
@@ -65,8 +65,8 @@ export default function InteractiveAvatar() {
       console.log("El avatar comenzó a hablar.", e);
     });
     avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
+      // Se imprime en consola pero ya no se almacena en estado para no renderizar texto
       console.log("El avatar terminó de hablar. Respuesta:", e.detail);
-      setDebug(`Respuesta: ${e.detail}`);
     });
     avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
       console.log("Transmisión desconectada.");
@@ -111,11 +111,11 @@ export default function InteractiveAvatar() {
   // Interrumpe el habla actual del avatar
   async function handleInterrupt() {
     if (!avatar.current) {
-      setDebug("El avatar no está inicializado");
+      console.error("El avatar no está inicializado");
       return;
     }
     await avatar.current.interrupt().catch((e) => {
-      setDebug(e.message);
+      console.error(e.message);
     });
   }
 
@@ -131,7 +131,6 @@ export default function InteractiveAvatar() {
       mediaStream.current.srcObject = stream;
       mediaStream.current.onloadedmetadata = () => {
         mediaStream.current!.play();
-        setDebug("Reproduciendo");
       };
     }
   }, [stream]);
@@ -232,11 +231,6 @@ export default function InteractiveAvatar() {
         <div className="flex items-center justify-center w-full h-full bg-[#212121]">
           <Spinner color="default" size="lg" />
         </div>
-      )}
-      {debug && (
-        <p className="text-xs font-mono absolute bottom-1 right-1 opacity-70">
-          {debug}
-        </p>
       )}
     </div>
   );
