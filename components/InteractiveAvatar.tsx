@@ -14,16 +14,13 @@ import {
   Spinner,
 } from "@nextui-org/react";
 import { useEffect, useRef, useState } from "react";
-import { usePrevious } from "ahooks";
-
 import { AVATARS, STT_LANGUAGE_LIST } from "@/app/lib/constants";
 
 /**
- * Esta versión:
- * - Elimina por completo los Tabs ("Text mode"/"Voice mode").
- * - Usa SIEMPRE "Voice mode".
- * - Mantiene la parte inicial para Custom Knowledge, etc.
- * - Mantiene los botones "Interrupt" y "End session".
+ * - Siempre "Voice mode", sin selector.
+ * - El video se muestra con object-cover (hace zoom/crop) para llenar el contenedor 9:16.
+ * - Botones "Interrupt" y "End session" superpuestos en la esquina inferior derecha.
+ * - Formulario inicial para ID de avatar, knowledge, etc.
  */
 export default function InteractiveAvatar() {
   // Estados
@@ -46,7 +43,7 @@ export default function InteractiveAvatar() {
     return process.env.NEXT_PUBLIC_BASE_API_URL;
   }
 
-  // Obtén el token del endpoint local
+  // Obtiene el token del endpoint local
   async function fetchAccessToken() {
     try {
       const response = await fetch("/api/get-access-token", {
@@ -139,25 +136,6 @@ export default function InteractiveAvatar() {
     setStream(undefined);
   }
 
-  // (Opcional) Usado anteriormente para "hablar texto" (text mode), lo dejamos por si lo necesitás.
-  async function handleSpeak(text: string) {
-    setIsLoadingRepeat(true);
-    if (!avatar.current) {
-      setDebug("Avatar API not initialized");
-      return;
-    }
-    await avatar.current
-      .speak({
-        text,
-        taskType: TaskType.REPEAT,
-        taskMode: TaskMode.SYNC,
-      })
-      .catch((e) => {
-        setDebug(e.message);
-      });
-    setIsLoadingRepeat(false);
-  }
-
   // Efecto: asignar el video al <video> cuando se obtenga el stream
   useEffect(() => {
     if (stream && mediaStream.current) {
@@ -167,31 +145,32 @@ export default function InteractiveAvatar() {
         setDebug("Playing");
       };
     }
-  }, [mediaStream, stream]);
+  }, [stream]);
 
-  // Al desmontar el comp, cerrar la sesión
+  // Al desmontar el componente, cerrar la sesión
   useEffect(() => {
     return () => {
       endSession();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Bloque UI
   return (
-    <div className="w-full flex flex-col gap-4 p-4 text-white">
+    // Ocupa todo el contenedor 9:16 (ver /app/page.tsx)
+    <div className="w-full h-full flex flex-col text-white">
       {stream ? (
-        // Avatar con video
-        <div className="relative flex flex-col items-center justify-center bg-black rounded-lg overflow-hidden">
+        // Avatar con video a pantalla completa (object-cover)
+        <div className="relative w-full h-full bg-black overflow-hidden">
           <video
             ref={mediaStream}
             autoPlay
             playsInline
-            className="w-full h-auto object-contain"
+            className="absolute inset-0 w-full h-full object-cover"
           >
             <track kind="captions" />
           </video>
-          {/* Botones superpuestos */}
-          <div className="absolute bottom-3 right-3 flex flex-col gap-2">
+          {/* Botones superpuestos en la esquina inferior derecha */}
+          <div className="absolute bottom-3 right-3 flex flex-col gap-2 z-10">
             <Button
               className="bg-gradient-to-tr from-indigo-500 to-indigo-300 rounded-lg"
               size="sm"
@@ -209,11 +188,18 @@ export default function InteractiveAvatar() {
               End session
             </Button>
           </div>
+
+          {/* (Opcional) Muestra algo si el usuario está hablando */}
+          {isUserTalking && (
+            <div className="absolute top-3 left-3 bg-black bg-opacity-60 px-2 py-1 rounded text-sm">
+              <p>Listening...</p>
+            </div>
+          )}
         </div>
       ) : !isLoadingSession ? (
         // Pantalla previa (seleccionar info y arrancar sesión)
-        <div className="flex flex-col gap-4 w-full items-center justify-center">
-          <div className="flex flex-col gap-2 w-full">
+        <div className="flex flex-col gap-4 w-full h-full items-center justify-center p-4 bg-black">
+          <div className="flex flex-col gap-2 w-full max-w-xs">
             <Input
               placeholder="Custom Knowledge ID (optional)"
               value={knowledgeId}
@@ -251,7 +237,7 @@ export default function InteractiveAvatar() {
             </Select>
           </div>
           <Button
-            className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full"
+            className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full max-w-xs"
             size="sm"
             variant="shadow"
             onClick={startSession}
@@ -260,13 +246,18 @@ export default function InteractiveAvatar() {
           </Button>
         </div>
       ) : (
-        <div className="flex items-center justify-center">
+        // Loading spinner
+        <div className="flex items-center justify-center w-full h-full bg-black">
           <Spinner color="default" size="lg" />
         </div>
       )}
 
-      {/* Opcional: Si querés un debug o texto de estado */}
-      <p className="text-xs font-mono text-right">{debug}</p>
+      {/* Debug info en la parte de abajo a la derecha */}
+      {debug && (
+        <p className="text-xs font-mono absolute bottom-1 right-1 opacity-70">
+          {debug}
+        </p>
+      )}
     </div>
   );
 }
