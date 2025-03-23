@@ -25,13 +25,12 @@ export default function InteractiveAvatar() {
   const [avatarId, setAvatarId] = useState<string>("");
   const [language, setLanguage] = useState<string>("es");
   const [isUserTalking, setIsUserTalking] = useState(false);
-  const [caption, setCaption] = useState<string>("");
 
   // Refs
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatar | null>(null);
 
-  // Helper: URL base de la API
+  // Helper: devuelve la URL base de la API
   function baseApiUrl() {
     return process.env.NEXT_PUBLIC_BASE_API_URL;
   }
@@ -66,12 +65,8 @@ export default function InteractiveAvatar() {
       console.log("El avatar comenzó a hablar.", e);
     });
     avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
-      // Convertir el detalle a string si es un objeto
-      let detail = e.detail;
-      let captionText = typeof detail === "object" ? JSON.stringify(detail) : detail;
-      console.log("El avatar terminó de hablar. Respuesta:", captionText);
-      setCaption(captionText || "");
-      setDebug(`Respuesta: ${captionText || "Sin detalle"}`);
+      console.log("El avatar terminó de hablar. Respuesta:", e.detail);
+      setDebug(`Respuesta: ${e.detail}`);
     });
     avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
       console.log("Transmisión desconectada.");
@@ -182,12 +177,6 @@ export default function InteractiveAvatar() {
           {isUserTalking && (
             <div className="absolute top-3 left-3 bg-black bg-opacity-60 px-2 py-1 rounded text-sm">
               <p>Escuchando...</p>
-            </div>
-          )}
-          {/* Captions superpuestos en la parte inferior central */}
-          {caption && (
-            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-70 px-4 py-2 rounded mb-2 z-10">
-              <p className="text-sm text-white">{caption}</p>
             </div>
           )}
         </div>
