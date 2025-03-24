@@ -20,7 +20,6 @@ export default function InteractiveAvatar() {
   // Estados
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
-  // Quitamos el estado debug para que no se muestre texto en la UI
   const [knowledgeId, setKnowledgeId] = useState<string>("");
   const [avatarId, setAvatarId] = useState<string>("");
   const [language, setLanguage] = useState<string>("es");
@@ -29,10 +28,10 @@ export default function InteractiveAvatar() {
   // Refs
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatar | null>(null);
-  // Ref para acumular los fragmentos de voz del avatar
+  // Acumulador para los fragmentos del mensaje que dice el avatar
   const accumulatedSpeech = useRef<string>("");
 
-  // Helper: devuelve la URL base de la API
+  // Helper: URL base de la API
   function baseApiUrl() {
     return process.env.NEXT_PUBLIC_BASE_API_URL;
   }
@@ -65,22 +64,25 @@ export default function InteractiveAvatar() {
     // Listeners
     avatar.current.on(StreamingEvents.AVATAR_START_TALKING, (e) => {
       console.log("El avatar comenzó a hablar.", e);
-      // Reiniciamos el acumulador al empezar a hablar
+      // Reiniciamos el acumulador al comenzar a hablar
       accumulatedSpeech.current = "";
     });
     avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
-      console.log("El avatar terminó de hablar. Texto completo:", accumulatedSpeech.current);
-      console.log("El avatar terminó de hablar. Respuesta:", e.detail);
-      // Opcional: reiniciar el acumulador después de mostrarlo
-      accumulatedSpeech.current = "";
+      console.log("El avatar terminó de hablar. Respuesta (metadatos):", e.detail);
     });
-    // Listener para capturar cada fragmento que emite el avatar en tiempo real
+    // Acumula cada fragmento emitido en tiempo real
     avatar.current.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (e) => {
       const fragment = e.detail?.message;
       if (fragment) {
         accumulatedSpeech.current += fragment;
         console.log("Fragmento recibido:", fragment);
       }
+    });
+    // Cuando el avatar finaliza el mensaje, se muestra el texto completo en la consola
+    avatar.current.on(StreamingEvents.AVATAR_END_MESSAGE, (e) => {
+      console.log("Mensaje final del avatar:", accumulatedSpeech.current);
+      // Opcional: reiniciar el acumulador para la próxima sesión
+      accumulatedSpeech.current = "";
     });
     avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
       console.log("Transmisión desconectada.");
