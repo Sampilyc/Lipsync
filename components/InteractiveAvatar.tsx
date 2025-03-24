@@ -20,7 +20,7 @@ export default function InteractiveAvatar() {
   // Estados
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
-  // Quitamos el estado debug para que no se muestre texto
+  // Quitamos el estado debug para que no se muestre texto en la UI
   const [knowledgeId, setKnowledgeId] = useState<string>("");
   const [avatarId, setAvatarId] = useState<string>("");
   const [language, setLanguage] = useState<string>("es");
@@ -29,6 +29,8 @@ export default function InteractiveAvatar() {
   // Refs
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatar | null>(null);
+  // Ref para acumular los fragmentos de voz del avatar
+  const accumulatedSpeech = useRef<string>("");
 
   // Helper: devuelve la URL base de la API
   function baseApiUrl() {
@@ -63,13 +65,22 @@ export default function InteractiveAvatar() {
     // Listeners
     avatar.current.on(StreamingEvents.AVATAR_START_TALKING, (e) => {
       console.log("El avatar comenzó a hablar.", e);
+      // Reiniciamos el acumulador al empezar a hablar
+      accumulatedSpeech.current = "";
     });
     avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
+      console.log("El avatar terminó de hablar. Texto completo:", accumulatedSpeech.current);
       console.log("El avatar terminó de hablar. Respuesta:", e.detail);
+      // Opcional: reiniciar el acumulador después de mostrarlo
+      accumulatedSpeech.current = "";
     });
-    // Agregado: imprime en la consola lo que dice el avatar en tiempo real
-    avatar.current.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (message) => {
-      console.log("Mensaje del avatar:", message);
+    // Listener para capturar cada fragmento que emite el avatar en tiempo real
+    avatar.current.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (e) => {
+      const fragment = e.detail?.message;
+      if (fragment) {
+        accumulatedSpeech.current += fragment;
+        console.log("Fragmento recibido:", fragment);
+      }
     });
     avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
       console.log("Transmisión desconectada.");
