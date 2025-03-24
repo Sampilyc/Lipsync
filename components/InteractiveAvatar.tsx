@@ -65,8 +65,11 @@ export default function InteractiveAvatar() {
       console.log("El avatar comenzó a hablar.", e);
     });
     avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
-      // Se imprime en consola pero ya no se almacena en estado para no renderizar texto
       console.log("El avatar terminó de hablar. Respuesta:", e.detail);
+    });
+    // Agregado: imprime en la consola lo que dice el avatar en tiempo real
+    avatar.current.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (message) => {
+      console.log("Mensaje del avatar:", message);
     });
     avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
       console.log("Transmisión desconectada.");
