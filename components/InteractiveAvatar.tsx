@@ -8,27 +8,24 @@ import StreamingAvatar, {
 } from "@heygen/streaming-avatar";
 import {
   Button,
-  Input,
-  Select,
-  SelectItem,
   Spinner,
 } from "@nextui-org/react";
 import { useEffect, useRef, useState } from "react";
-import { AVATARS, STT_LANGUAGE_LIST } from "@/app/lib/constants";
 
 export default function InteractiveAvatar() {
   // Estados
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
-  const [knowledgeId, setKnowledgeId] = useState<string>("");
-  const [avatarId, setAvatarId] = useState<string>("");
-  const [language, setLanguage] = useState<string>("es");
+  // Parámetros internos
+  const [knowledgeId] = useState<string>("d9605cf5cda749d08bc3e46bdf377f6b");
+  const [avatarId] = useState<string>("58222722a15542ff91eff3f625849746");
+  const [language] = useState<string>("es");
   const [isUserTalking, setIsUserTalking] = useState(false);
 
   // Refs
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatar | null>(null);
-  // Acumulador para los fragmentos del mensaje que dice el avatar
+  // Acumulador para los fragmentos de lo que dice el avatar
   const accumulatedSpeech = useRef<string>("");
 
   // Helper: URL base de la API
@@ -39,9 +36,7 @@ export default function InteractiveAvatar() {
   // Obtiene el token del endpoint local
   async function fetchAccessToken() {
     try {
-      const response = await fetch("/api/get-access-token", {
-        method: "POST",
-      });
+      const response = await fetch("/api/get-access-token", { method: "POST" });
       const token = await response.text();
       console.log("Access Token:", token);
       return token;
@@ -64,13 +59,13 @@ export default function InteractiveAvatar() {
     // Listeners
     avatar.current.on(StreamingEvents.AVATAR_START_TALKING, (e) => {
       console.log("El avatar comenzó a hablar.", e);
-      // Reiniciamos el acumulador al comenzar a hablar
+      // Reinicia el acumulador
       accumulatedSpeech.current = "";
     });
     avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
-      console.log("El avatar terminó de hablar. Respuesta (metadatos):", e.detail);
+      console.log("El avatar terminó de hablar. (Metadatos):", e.detail);
     });
-    // Acumula cada fragmento emitido en tiempo real
+    // Acumula los fragmentos mientras el avatar habla
     avatar.current.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (e) => {
       const fragment = e.detail?.message;
       if (fragment) {
@@ -78,10 +73,9 @@ export default function InteractiveAvatar() {
         console.log("Fragmento recibido:", fragment);
       }
     });
-    // Cuando el avatar finaliza el mensaje, se muestra el texto completo en la consola
+    // Cuando el avatar finaliza el mensaje, muestra el mensaje completo en la consola
     avatar.current.on(StreamingEvents.AVATAR_END_MESSAGE, (e) => {
       console.log("Mensaje final del avatar:", accumulatedSpeech.current);
-      // Opcional: reiniciar el acumulador para la próxima sesión
       accumulatedSpeech.current = "";
     });
     avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
@@ -197,50 +191,14 @@ export default function InteractiveAvatar() {
         </div>
       ) : !isLoadingSession ? (
         <div className="flex flex-col gap-4 w-full h-full items-center justify-center p-4 bg-[#212121]">
-          <div className="flex flex-col gap-2 w-full max-w-xs">
-            <Input
-              placeholder="ID de Conocimiento (opcional)"
-              value={knowledgeId}
-              onChange={(e) => setKnowledgeId(e.target.value)}
-              size="sm"
-            />
-            <Input
-              placeholder="ID de Avatar (opcional)"
-              value={avatarId}
-              onChange={(e) => setAvatarId(e.target.value)}
-              size="sm"
-            />
-            <Select
-              placeholder="Seleccionar un avatar de ejemplo"
-              size="sm"
-              onChange={(e) => setAvatarId(e.target.value)}
-            >
-              {AVATARS.map((av) => (
-                <SelectItem key={av.avatar_id} textValue={av.avatar_id}>
-                  {av.name}
-                </SelectItem>
-              ))}
-            </Select>
-            <Select
-              label="Idioma"
-              placeholder="Seleccionar idioma"
-              size="sm"
-              className="max-w-xs"
-              selectedKeys={[language]}
-              onChange={(e) => setLanguage(e.target.value)}
-            >
-              {STT_LANGUAGE_LIST.map((lang) => (
-                <SelectItem key={lang.key}>{lang.label}</SelectItem>
-              ))}
-            </Select>
-          </div>
+          {/* Pantalla previa: solo se muestra el botón "Comenzar" */}
           <Button
             className="bg-gradient-to-tr from-[#ff6600] to-[#ff9152] w-full max-w-xs"
             size="sm"
             variant="shadow"
             onClick={startSession}
           >
-            Iniciar sesión
+            Comenzar
           </Button>
         </div>
       ) : (
