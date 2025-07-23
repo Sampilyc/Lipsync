@@ -18,7 +18,7 @@ export default function InteractiveAvatar() {
   const [stream, setStream] = useState<MediaStream>();
   // Parámetros internos
   const [knowledgeId] = useState<string>("0a260b1da86345f888cf8bc5ed3f4f7c");
-  const [avatarId] = useState<string>("Santa_Fireplace_Front_public");
+  const [avatarId] = useState<string>("LogicoYCreativo LyC");
   const [language] = useState<string>("es");
   const [isUserTalking, setIsUserTalking] = useState(false);
 
