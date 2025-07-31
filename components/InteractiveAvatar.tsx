@@ -101,8 +101,7 @@ export default function InteractiveAvatar() {
         avatarName: avatarId,
         knowledgeId: knowledgeId,
         voice: {
-          rate: 1.5,
-          emotion: VoiceEmotion.EXCITED,
+          rate: 1.5
         },
         language: language,
         disableIdleTimeout: true,
