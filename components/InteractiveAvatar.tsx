@@ -17,8 +17,8 @@ export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
   // Parámetros internos
-  const [knowledgeId] = useState<string>("0a260b1da86345f888cf8bc5ed3f4f7c");
-  const [avatarId] = useState<string>("a3b741b5e32544d4911f5550b7514c18");
+  const [knowledgeId] = useState<string>("7950caa3a36041c5a5ac285e5036ece8");
+  const [avatarId] = useState<string>("7af8bbd500ca45beb6efab071759901a");
   const [language] = useState<string>("es");
   const [isUserTalking, setIsUserTalking] = useState(false);
 
