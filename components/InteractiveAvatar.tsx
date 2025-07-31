@@ -100,9 +100,6 @@ export default function InteractiveAvatar() {
         quality: AvatarQuality.Low,
         avatarName: avatarId,
         knowledgeId: knowledgeId,
-        voice: {
-          rate: 1.5
-        },
         language: language,
         disableIdleTimeout: true,
       });
